@@ -19,6 +19,9 @@ M_x = lambda x: M2.solve(x)
 M = spla.LinearOperator((3,3), M_x)
 
 x = spla.gmres(A,b,M=M)
+
+    Authour: Dominic Hill
+      Email: dominicwhill@gmail.com  
 '''
 import sys
 import os
@@ -99,11 +102,9 @@ if max_input != -1:
     T_data = T_data[:max_input]
     C_data = C_data[:max_input]
     x_grid_cbg = x_grid_cbg[:max_input+1]
-#R_data = R_data[::-1]
 
 #---------------------
 
-print ' np.shape(x_grid_cbg) = ', np.shape(x_grid_cbg)
 xmin,xmax = x_grid_cbg[0],x_grid_cbg[-1] # lambda_mfp
 ymin,ymax = 0.0,10.0 # lambda_mfp
 Z = 6.51
@@ -148,7 +149,10 @@ econst = (q_e/(m_e*lambda_mfp*(tau_ei**-2)))*((2.0/(c*n_refractive_norm*epsilon0
 E_norm0 = econst*(I0_W_per_m2**0.5)
 print ' E_norm0 = ', E_norm0
 #----------------------
-#
+# Set boundary conditions:
+# Currently only bcs available are: 
+#   'laser' -  Laser source 
+#   'refl' - reflectie bcs
 x_bc_lh = 'laser'
 x_bc_rh = 'refl'
 
@@ -296,9 +300,7 @@ def generate_matrix(ne,Te):
     
     print '------- packing matrix ------time = ', time.clock()
     #nu_ei_h = get_nuei(n_data,T_data)#assuming nu_ei
-    #nu = nu_ei_h*N_h
-    #   row,col =
-    # data = 
+
     diag_indices = np.arange(ny_h*nx_h)
     diag_row,diag_col = diag_indices,diag_indices
     xp1_row = np.arange((ny_h*nx_h)-1)
@@ -359,15 +361,6 @@ def generate_matrix(ne,Te):
         coeff_laplacian_ip1j[nnx] = 0.0
     
     
-    '''
-    if x_bc_rh == 'refl':
-        # reflective boundary condition at max
-        for i1d in range(nx_h,ny_h*nx_h,nx_h):
-            #i1d = get_indices_xy_shift(nx_h-1,iy,1,0)
-            coeff_laplacian_ip1j[i1d] = 0.0
-    '''
-    
-    
     coeff_laplacian_im1j = T*I_off_diag
     coeff_laplacian_ijp1 = J*I_diag
     coeff_laplacian_ijm1 = J*I_diag
@@ -390,12 +383,7 @@ def generate_matrix(ne,Te):
     print ' sum yp1 = ', np.sum(coeff_laplacian_ijp1)
     print '\n\n---- concated rows --------time = ', time.clock()
     mat_sparse = spa.csc_matrix((data,(row,col)),shape=(ny_h*nx_h,ny_h*nx_h),dtype=complex)
-    '''
-    for iy in range(ny_h):
-        col,row = get_indices_xy_shift(nx_h,iy,1,0)
-        # reflective bcs at rhs
-        mat_sparse[row,col] = 0.0
-    '''
+
     print '---- packed matrix --------time = ', time.clock()
     print 'mat_sparse[1,:] = ', mat_sparse[0,:]
     print 'mat_sparse[2,:] = ', mat_sparse[1,:]
@@ -419,11 +407,9 @@ def generate_const(psi_old,tstep):
         
         envelope = generate_laser()
         print ' omega t = ', omega_0_norm*tstep
-        #Kx = (omega_0_norm/c_norm)*(2.0**0.5)*n_refractive_norm
         
         psi_laser = envelope#*np.exp(1j*(-omega_0_norm*tstep*np.ones(ny_h)+Kx*0.0))
         
-        #psi_laser = envelope*np.exp(1j*Kx*y_grid_h)
         bc_A = ((c_norm*romega)**2)*(1.0/(dx_h**2))*envelope
         for iy in range(ny_h):
             i1d  = get_indices_xy_vector(0,iy)
@@ -432,11 +418,7 @@ def generate_const(psi_old,tstep):
             i1d = get_indices_xy_vector(0,iy)
             i1d2 = get_indices_xy_vector(nx_h-1,iy)
             
-            #print 'const[-nx_h:] = ', const[i1d],const[i1d2],' i1d = ', i1d, i1d2
-        #plt.figure()
-        #plt.plot(y_grid_h,psi_laser.real)
-        #plt.show()
-        #sys.exit()
+
         
     
     return const
@@ -468,8 +450,7 @@ psi_old = np.zeros((nx_h*ny_h))
 
 
 # Sparse CSR matrix:  A = spa.csr_matrix(data,(row,col)))
-#n_data_h = interp_to_helmholtz(n_data2d)
-#T_data_h = interp_to_helmholtz(T_data2d)
+
 if dens_on:
     n_data_h = interp_to_helmholtz_1d(n_data)
     T_data_h = interp_to_helmholtz_1d(T_data)
@@ -535,9 +516,6 @@ while tstep<= tmax:
         im = ax.imshow(plot_array,aspect='auto',vmin=vmin,vmax=vmax,extent=lims)
         imabs = ax3.imshow(absorption,aspect='auto',vmin=amin,vmax=amax,cmap='hot',extent=lims)
         
-        #im = ax.imshow(psi_array[:,x_l:x_u].real,aspect='auto',extent=lims)
-        
-        #plt.pcolor(X, Y, f(data), cmap=cm, vmin=-4, vmax=4)
         ax.set_ylabel(r' y [ $c \Delta t$ ]')
         ax.set_xlabel(r' x [ $c \Delta t$]')
         if cbar_on:
@@ -548,6 +526,6 @@ while tstep<= tmax:
         cbarabs.set_clim(amin,amax)
         
         ax.set_title(' tstep = ' + str(tstep) + ' it_num = ' + str(tstep/dt_h))
-        #fig.savefig('pics/' + str(tstep/dt_h) + '.png')
+        fig.savefig(str(tstep/dt_h) + '.png')
         plt.pause(0.05)
         
